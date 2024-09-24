@@ -109,18 +109,21 @@ async def on_ready():
 async def on_message(message: Message):
     if message.author == discord_client.user:
         return
-
-    # General conversational response using OpenAI
-    if message.content.startswith('!ask'):
-        user_input = message.content[len('!ask '):].strip()
-        response = generate_conversational_response(user_input)
-        await message.channel.send(response)
-
-    # Search FAQ for employee question
-    if message.content.startswith('!faq'):
-        question = message.content[len('!faq '):].strip()
-        answer = search_faq(question, faq_content)
-        await message.channel.send(answer)
+    
+    try:
+        # General conversational response using OpenAI
+        if message.content.startswith('!ask'):
+            user_input = message.content[len('!ask '):].strip()
+            response = generate_conversational_response(user_input)
+            await message.channel.send(response)
+    
+        # Search FAQ for employee question
+        if message.content.startswith('!faq'):
+            question = message.content[len('!faq '):].strip()
+            answer = search_faq(question, faq_content)
+            await message.channel.send(answer)
+    except Exception as e:
+        print(f"Error: {str(e)}")
 
 # Run the bot
 discord_client.run(discord_token)
