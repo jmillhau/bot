@@ -6,6 +6,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 from google_drive_auth import authenticate_google_drive  # Import Google Drive authentication
 import io
+from discord import Message
 
 # Load environment variables from .env file
 load_dotenv()
@@ -13,7 +14,7 @@ load_dotenv()
 # Set your API keys from environment variables
   # Load OpenAI API key from environment variable
 discord_token = os.getenv('DISCORD_TOKEN')    # Load Discord bot token from environment variable
-client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+ai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
 # Authenticate with Google Drive
 creds = authenticate_google_drive()
@@ -72,19 +73,22 @@ def search_faq(question, faq_content):
 
 # Function to generate a conversational response using OpenAI
 def generate_conversational_response(user_input):
-    response = OpenAI.completions.create(engine="gpt-3.5-turbo-instruct",
-    prompt=f"Respond to this in a conversational tone: {user_input}",
-    max_tokens=150)
+    response = ai_client.completions.create(
+        model="gpt-3.5-turbo-instruct",
+        prompt=f"Respond to this in a conversational tone: {user_input}",
+        max_tokens=150,
+        stream=False,
+    )
     return response.choices[0].text.strip()
 
 # Start of the bot
 intents = discord.Intents.default()  # Create a new instance of the default intents
 intents.message_content = True       # Enable the bot to read the message content
 
-client = discord.Client(intents=intents)
+discord_client = discord.Client(intents=intents)  # Create a new instance of the Discord client
 
 # On bot startup, search the folder for the FAQ file and load it
-@client.event
+@discord_client.event
 async def on_ready():
     folder_id = '1HtBcRQm1tiVVZyLpOPsXxFM0JwFLuqYM'  # Replace with your actual folder ID
     faq_file_id = find_faq_file_in_folder(folder_id, creds)
@@ -96,12 +100,12 @@ async def on_ready():
     else:
         print("FAQ file not found in the specified folder.")
 
-    print(f'We have logged in as {client.user}')
+    print(f'We have logged in as {discord_client.user}')
 
 # Handle incoming messages
-@client.event
-async def on_message(message):
-    if message.author == client.user:
+@discord_client.event
+async def on_message(message: Message):
+    if message.author == discord_client.user:
         return
 
     # General conversational response using OpenAI
@@ -117,4 +121,4 @@ async def on_message(message):
         await message.channel.send(answer)
 
 # Run the bot
-client.run(discord_token)
+discord_client.run(discord_token)
