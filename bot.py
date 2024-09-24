@@ -68,7 +68,9 @@ def search_faq(question, faq_content):
             # Get the answer (next line after the question)
             answer = lines[i + 1] if i + 1 < len(lines) else "Sorry, I can't find the answer to that."
             break
-
+        
+    if answer is None or answer.strip() == "":
+        answer = "Sorry, I can't find the answer to that."
     return answer
 
 # Function to generate a conversational response using OpenAI
