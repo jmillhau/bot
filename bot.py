@@ -73,6 +73,45 @@ def search_faq(question, faq_content):
         answer = "Sorry, I can't find the answer to that."
     return answer
 
+def search_faq_ai(question, faq_content):
+    try:
+        response = ai_client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                # {"role": "system", "content": "You are a helpful assistant that answers questions based on the provided FAQ content. If the answer is not in the FAQ, respond with exactly: 'Sorry, I can't find the answer to that.'"},
+                 {"role": "system", "content": """You are a helpful assistant that finds answers in the provided FAQ content. 
+                Your task is to match questions, even if they are phrased differently or are only part of a larger question in the FAQ.
+                When you find a match, focus on answering only the specific part asked by the user.
+                If the answer in the FAQ covers multiple topics, extract and return only the relevant part.
+                If you can't find a matching question or answer in the FAQ, respond with exactly: 'Sorry, I can't find the answer to that.'
+                
+                Example:
+                FAQ Content:
+                Q: Do you offer open play or walk-ins or drop-ins?
+                A: We do not offer any walk-in events. We have scheduled Open Play nights for Adult participants only 18+. For more information on those, see our Open Play page here.
+                
+                User Question: "Do you offer drop-ins?"
+                Your Response: "We do not offer any walk-in events."
+                
+                Always ensure your response is concise and directly addresses the user's specific question."""},
+                {"role": "user", "content": f"FAQ Content:\n\n{faq_content}\n\nQuestion: {question}\n\nAnswer:"}
+            ],
+            max_tokens=200,
+            temperature=0.3,
+            stream=False,
+        )
+        answer = response.choices[0].message.content.strip()
+        
+        if answer.startswith("Answer:"):
+            answer = answer[7:].strip()
+    
+        if answer is None or answer.strip() == "":
+            answer = "Sorry, I can't find the answer to that."
+        return answer
+    except Exception as e:
+        print(f"Error in search_faq: {str(e)}")
+        return "I'm sorry, but I encountered an error while searching for the answer. Please try again later."
+
 # Function to generate a conversational response using OpenAI
 def generate_conversational_response(user_input):
     response = ai_client.completions.create(
@@ -109,7 +148,6 @@ async def on_ready():
 async def on_message(message: Message):
     if message.author == discord_client.user:
         return
-    
     try:
         # General conversational response using OpenAI
         if message.content.startswith('!ask'):
@@ -117,11 +155,16 @@ async def on_message(message: Message):
             response = generate_conversational_response(user_input)
             await message.channel.send(response)
     
-        # Search FAQ for employee question
-        if message.content.startswith('!faq'):
+        # Search FAQ for employee question        
+        if message.content.startswith('!faq-old'):
             question = message.content[len('!faq '):].strip()
             answer = search_faq(question, faq_content)
             await message.channel.send(answer)
+        elif message.content.startswith('!faq'):
+            question = message.content[len('!faq '):].strip()
+            answer = search_faq_ai(question, faq_content)
+            await message.channel.send(answer)
+            
     except Exception as e:
         print(f"Error: {str(e)}")
 
